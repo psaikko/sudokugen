@@ -2,12 +2,21 @@
 
 import pysat
 import itertools
+import random
+import sys
 from pysat.card import *
 from pysat.solvers import MinisatGH as Solver
 from pysat.formula import CNF
-import random
 
-N = 3
+if len(sys.argv) != 2:
+    print("Required arguments: square dimension")
+    exit(1)
+
+try:
+    N = int(sys.argv[1])
+except:
+    print("Cannot parse",sys.argv[1],"as integer")
+    exit(1)
 
 F = CNF()
 
@@ -20,6 +29,9 @@ def getVar():
 # create a variable for each choice of value (1..n^2) for each cell (1..(n^2)^2)
 V_flat = [getVar() for v in range((N**2)**3)]
 
+# shuffle variable order to randomize generated solution
+random.shuffle(V_flat)
+
 # reshape to (N**2,N**2,N**2)
 def group_by(k, l):
     for i in range(len(l)//k):
@@ -28,9 +40,6 @@ V = list(group_by(N**2, list(group_by(N**2, V_flat))))
 
 # Index of last solution variable (rest are added by cardinality encodings)
 max_problem_var = nv
-
-#V = [[[getVar() for v in range(N**2)] for j in range(N**2)] for i in range(N**2)]
-#V_flat = list(itertools.chain(*itertools.chain(*V)))
 
 enc = EncType.ladder
 
@@ -41,10 +50,6 @@ for i in range(N**2):
         col = [V[i][j][v] for j in range(N**2)]
         F.append(col)
         # Atmost-1 encoding
-        print(col)
-        print(nv)
-        print(enc)
-        col = [int(i) for i in col]
         card = pysat.card.CardEnc.atmost(lits=col, top_id=nv, bound=1, encoding=enc)
         F.extend(card.clauses)
         nv = card.nv
@@ -84,10 +89,6 @@ for i in range(N**2):
 
 solver = Solver(bootstrap_with=F.clauses,use_timer=True)
 
-def random_polarity(): return random.randint(0,1)*2 - 1
-pols = [v * random_polarity() for v in V_flat]
-solver.set_phases(pols)
-
 # First compute a solution
 if solver.solve():
     solution = [v for v in solver.get_model() if v > 0 and v <= max_problem_var]
@@ -96,7 +97,7 @@ if solver.solve():
         for j in range(N**2):
             vs = V[i][j]
             trues = [ix+1 for (ix,v) in enumerate(vs) if v in S]
-            print(trues[0],end="")
+            print("%2d"%trues[0],end="")
         print()
     print(solver.time())
 
@@ -104,9 +105,11 @@ if solver.solve():
 solver.add_clause([-v for v in solution])
 
 untested_clues = solution[:]
-#random.shuffle(untested_clues)
+random.shuffle(untested_clues)
 
 necessary_clues = []
+
+solver.set_phases(v * random.randint(0,1)*2-1 for v in V_flat)
 
 # Compute a minimal clueset
 while len(untested_clues):
@@ -114,23 +117,17 @@ while len(untested_clues):
     test_clue = untested_clues.pop()
 
     if solver.solve(assumptions=necessary_clues+untested_clues):
-        # 
+        # Alternate solution exists, keep test_clue 
         necessary_clues.append(test_clue)        
     else:
-        # test_clue not necessary
-        print("UNSAT")
+        # No alternate solutions, drop test_clue
         core = solver.get_core()
-        print(len(core))
-        t = len(untested_clues)
+        # Remove clues not necessary for deriving unsatisfiability
         untested_clues = [l for l in untested_clues if l in core]
-        if t != len(untested_clues):
-            print("# dropped", t - len(untested_clues))
-
-
-    print("# confirmed", len(necessary_clues))
-    print("# left", len(untested_clues))
-
-print(solver.solve(assumptions=necessary_clues)) # expect false
+    print("\rClues checked: %3.2f%%" % ((len(solution) - len(untested_clues)) / len(solution) * 100), end="")
+print()
+print("Checking uniqueness: ",end="")
+print("error" if solver.solve(assumptions=necessary_clues) else "OK") # expect false
 
 #print(necessary_clues)
 necessary_clues = set(necessary_clues)
@@ -145,4 +142,3 @@ for i in range(N**2):
     print()
 
 print("Solver time: %.2fs" % solver.time_accum())
-
