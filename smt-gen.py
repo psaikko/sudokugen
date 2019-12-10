@@ -9,11 +9,17 @@ from pysmt.shortcuts import *
 from pysmt.typing import INT
 from pysmt.oracles import get_logic
 
-#instance = [list(map(int,line.strip().split())) for line in open(sys.argv[1], 'r')]
+if len(sys.argv) != 2:
+    print("Required arguments: puzzle dimension")
+    exit(1)
+
+try:
+    n = int(sys.argv[1])
+except:
+    print("Cannot parse",sys.argv[1],"as integer")
+    exit(1)
 
 start = timer()
-
-n = 16
 sn = int(sqrt(n))
 
 rows = [[Symbol("%d,%d" % (i,j), INT) for j in range(n)] for i in range(n)]

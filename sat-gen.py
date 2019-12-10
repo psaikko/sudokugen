@@ -10,11 +10,11 @@ from pysat.solvers import MinisatGH as Solver
 from pysat.formula import CNF
 
 if len(sys.argv) != 2:
-    print("Required arguments: square dimension")
+    print("Required arguments: puzzle dimension")
     exit(1)
 
 try:
-    N = sqrt(int(sys.argv[1]))
+    N = int(sqrt(int(sys.argv[1], 10)))
 except:
     print("Cannot parse",sys.argv[1],"as integer")
     exit(1)
