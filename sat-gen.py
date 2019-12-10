@@ -4,6 +4,7 @@ import pysat
 import itertools
 import random
 import sys
+from math import sqrt
 from pysat.card import *
 from pysat.solvers import MinisatGH as Solver
 from pysat.formula import CNF
@@ -13,7 +14,7 @@ if len(sys.argv) != 2:
     exit(1)
 
 try:
-    N = int(sys.argv[1])
+    N = sqrt(int(sys.argv[1]))
 except:
     print("Cannot parse",sys.argv[1],"as integer")
     exit(1)
@@ -129,7 +130,6 @@ print()
 print("Checking uniqueness: ",end="")
 print("error" if solver.solve(assumptions=necessary_clues) else "OK") # expect false
 
-#print(necessary_clues)
 necessary_clues = set(necessary_clues)
 for i in range(N**2):
     for j in range(N**2):
